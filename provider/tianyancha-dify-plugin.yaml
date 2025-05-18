@@ -1,0 +1,31 @@
+identity:
+  author: bdim
+  name: tianyancha-dify-plugin
+  label:
+    en_US: Tianyancha Data API
+    zh_Hans: 天眼查数据接口
+    pt_BR: Tianyancha Data API
+  description:
+    en_US: Access enterprise information and business data from Tianyancha API
+    zh_Hans: 通过天眼查API获取企业信息和商业数据
+    pt_BR: Access enterprise information and business data from Tianyancha API
+  icon: icon.svg
+tools:
+  - tools/tianyancha-dify-plugin.yaml
+extra:
+  python:
+    source: provider/tianyancha-dify-plugin.py
+credentials_for_provider:
+  token: 
+    type: secret-input
+    required: true
+    label: 
+      en_US: Tianyancha API Token
+      zh_Hans: 天眼查API Token
+    placeholder: 
+      en_US: Enter your Tianyancha API token
+      zh_Hans: 请输入您的天眼查API令牌
+    help: 
+      en_US: You can get your token from Tianyancha data center -> My APIs
+      zh_Hans: 你可以从天眼查的数据中心 -> 我的接口中获取token
+    url: https://open.tianyancha.com/
