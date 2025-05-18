@@ -4,11 +4,9 @@ identity:
   label:
     en_US: Tianyancha Data API
     zh_Hans: 天眼查数据接口
-    pt_BR: Tianyancha Data API
   description:
     en_US: Access enterprise information and business data from Tianyancha API
     zh_Hans: 通过天眼查API获取企业信息和商业数据
-    pt_BR: Access enterprise information and business data from Tianyancha API
   icon: icon.svg
 tools:
   - tools/tianyancha-dify-plugin.yaml
