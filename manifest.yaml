@@ -4,37 +4,16 @@ author: bdim
 name: tianyancha-dify-plugin
 label:
   en_US: tianyancha-dify-plugin
-  ja_JP: tianyancha-dify-plugin
-  zh_Hans: tianyancha-dify-plugin
+  zh_Hans: 天眼查企业信息 Dify 插件
   pt_BR: tianyancha-dify-plugin
 description:
   en_US: A Dify plugin integrated for tianyancha
-  ja_JP: A Dify plugin integrated for tianyancha
-  zh_Hans: A Dify plugin integrated for tianyancha
+  zh_Hans: 一个 Dify 的天眼查企业信息查询插件
   pt_BR: A Dify plugin integrated for tianyancha
 icon: icon.svg
 resource:
   memory: 268435456
-  permission:
-    tool:
-      enabled: false
-    model:
-      enabled: false
-      llm: false
-      text_embedding: false
-      rerank: false
-      tts: false
-      speech2text: false
-      moderation: false
-    node:
-      enabled: false
-    endpoint:
-      enabled: false
-    app:
-      enabled: false
-    storage:
-      enabled: false
-      size: 1024
+  permission: {}
 plugins:
   tools:
     - provider/tianyancha-dify-plugin.yaml
@@ -51,4 +30,3 @@ meta:
 created_at: 2025-05-18T20:27:48.487433+08:00
 privacy: PRIVACY.md
 repo: https://github.com/bdim404/tianyancha-dify-plugin
-verified: false
