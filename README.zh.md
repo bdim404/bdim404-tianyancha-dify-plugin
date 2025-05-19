@@ -54,6 +54,6 @@ dify-plugin-daemon plugin package ./tianyancha-dify-plugin
 
 ## 作者
 
-**作者:** bdim  
-**版本:** 0.0.1  
+**作者:** bdim, fernvenue  
+**版本:** 0.0.2  
 **类型:** tool
