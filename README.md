@@ -55,5 +55,5 @@ You can call this plugin in Dify workflows or elsewhere. All parameters have det
 ## Author
 
 **Author:** bdim, fernvenue  
-**Version:** 0.0.2  
+**Version:** 0.1.0
 **Type:** tool

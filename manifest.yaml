@@ -1,4 +1,4 @@
-version: 0.0.2
+version: 0.1.0
 type: plugin
 author: bdim
 name: tianyancha-dify-plugin
@@ -16,7 +16,7 @@ plugins:
   tools:
     - provider/tianyancha-dify-plugin.yaml
 meta:
-  version: 0.0.1
+  version: 0.1.0
   arch:
     - amd64
     - arm64
