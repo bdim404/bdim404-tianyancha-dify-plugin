@@ -22,35 +22,175 @@ class TianyanchaDifyPluginTool(Tool):
         query_type = tool_parameters.get("query_type", "基本信息")
         
         if not company_keyword:
-            yield self.create_json_message({
-                "error": "公司关键词不能为空"
-            })
+            error_message = "公司关键词不能为空"
+            yield self.create_json_message({"error": error_message})
+            yield self.create_text_message(error_message)
             return
             
         # 从runtime获取凭证
         try:
             token = self.runtime.credentials["token"]
         except (KeyError, AttributeError):
-            yield self.create_json_message({
-                "error": "API token未配置，请在插件设置中提供有效的天眼查API Token"
-            })
+            error_message = "API token未配置，请在插件设置中提供有效的天眼查API Token"
+            yield self.create_json_message({"error": error_message})
+            yield self.create_text_message(error_message)
             return
         
         # 根据查询类型调用不同API
         try:
             if query_type == "司法风险":
                 result = self._get_company_judicial_risk(company_keyword, token)
+                text_result = self._generate_judicial_risk_text(result)
             elif query_type == "工商信息":
                 result = self._get_company_business_info(company_keyword, token)
+                text_result = self._generate_business_info_text(result)
             else:  # 默认为基本信息
                 result = self._get_company_base_info(company_keyword, token)
+                text_result = self._generate_base_info_text(result)
                 
+            # 返回结构化JSON数据
             yield self.create_json_message(result)
+            # 返回可读文本格式
+            yield self.create_text_message(text_result)
         except Exception as e:
-            yield self.create_json_message({
-                "error": f"请求过程中发生错误: {str(e)}"
-            })
+            error_message = f"请求过程中发生错误: {str(e)}"
+            yield self.create_json_message({"error": error_message})
+            yield self.create_text_message(error_message)
     
+    def _generate_base_info_text(self, data: dict) -> str:
+        """生成企业基本信息的可读文本"""
+        basic_info = data.get("基本信息", {})
+        reg_info = data.get("注册信息", {})
+        tags = data.get("企业标签", [])
+        
+        text = f"# {basic_info.get('公司名称', '未知企业')}的基本信息\n\n"
+        
+        text += "## 基本信息\n"
+        for key, value in basic_info.items():
+            if value and key != "行业细分":  # 排除行业细分，因为它可能是复杂结构
+                text += f"- **{key}**: {value}\n"
+        
+        text += "\n## 注册信息\n"
+        for key, value in reg_info.items():
+            if value:
+                text += f"- **{key}**: {value}\n"
+        
+        if tags:
+            text += "\n## 企业标签\n"
+            text += "- " + "、".join(tags) + "\n"
+        
+        return text
+    
+    def _generate_judicial_risk_text(self, data: dict) -> str:
+        """生成企业司法风险信息的可读文本"""
+        judicial_risk = data.get("司法风险", {})
+        
+        if isinstance(judicial_risk, str):
+            return f"# 司法风险信息\n\n{judicial_risk}"
+        
+        text = "# 司法风险信息\n\n"
+        
+        for risk_type, risk_items in judicial_risk.items():
+            text += f"## {risk_type}（{len(risk_items)}条）\n\n"
+            
+            for i, item in enumerate(risk_items[:5], 1):  # 每种类型只显示前5条
+                text += f"### 记录 {i}\n"
+                for key, value in item.items():
+                    if value:
+                        text += f"- **{key}**: {value}\n"
+                text += "\n"
+            
+            if len(risk_items) > 5:
+                text += f"*注：共有{len(risk_items)}条记录，仅显示前5条*\n\n"
+        
+        return text
+    
+    def _generate_business_info_text(self, data: dict) -> str:
+        """生成企业工商信息的可读文本"""
+        business_info = data.get("工商信息", {})
+        
+        text = "# 工商信息\n\n"
+        
+        # 基本信息
+        basic_info = business_info.get("基本信息", {})
+        if basic_info:
+            text += "## 基本信息\n"
+            for key, value in basic_info.items():
+                if value:
+                    text += f"- **{key}**: {value}\n"
+            text += "\n"
+        
+        # 主要人员
+        staff_list = business_info.get("主要人员", [])
+        if staff_list:
+            text += f"## 主要人员（{len(staff_list)}名）\n\n"
+            for i, staff in enumerate(staff_list[:5], 1):
+                text += f"{i}. **{staff.get('姓名', '未知')}**: {staff.get('职位', '未知')}\n"
+            
+            if len(staff_list) > 5:
+                text += f"\n*注：共有{len(staff_list)}名主要人员，仅显示前5名*\n"
+            text += "\n"
+        
+        # 股东信息
+        shareholders = business_info.get("股东信息", [])
+        if shareholders:
+            text += f"## 股东信息（{len(shareholders)}名）\n\n"
+            for i, shareholder in enumerate(shareholders[:5], 1):
+                text += f"{i}. **{shareholder.get('股东名称', '未知')}**（{shareholder.get('股东类型', '未知')}）\n"
+                capital_list = shareholder.get("资本信息", [])
+                if capital_list:
+                    for capital in capital_list[:2]:
+                        if capital.get('出资额'):
+                            text += f"   - 出资额: {capital.get('出资额')}，比例: {capital.get('出资比例')}\n"
+            
+            if len(shareholders) > 5:
+                text += f"\n*注：共有{len(shareholders)}名股东，仅显示前5名*\n"
+            text += "\n"
+        
+        # 对外投资
+        investments = business_info.get("对外投资", [])
+        if investments:
+            text += f"## 对外投资（{len(investments)}家）\n\n"
+            for i, invest in enumerate(investments[:5], 1):
+                text += f"{i}. **{invest.get('被投资企业名称', '未知')}**\n"
+                text += f"   - 投资比例: {invest.get('投资比例', '未知')}\n"
+                text += f"   - 注册资本: {invest.get('注册资本', '未知')}\n"
+                text += f"   - 经营状态: {invest.get('经营状态', '未知')}\n"
+                text += "\n"
+            
+            if len(investments) > 5:
+                text += f"*注：共有{len(investments)}家被投资企业，仅显示前5家*\n\n"
+        
+        # 分支机构
+        branches = business_info.get("分支机构", [])
+        if branches:
+            text += f"## 分支机构（{len(branches)}家）\n\n"
+            for i, branch in enumerate(branches[:5], 1):
+                text += f"{i}. **{branch.get('分支机构名称', '未知')}**\n"
+                text += f"   - 登记状态: {branch.get('登记状态', '未知')}\n"
+                text += f"   - 成立日期: {branch.get('成立日期', '未知')}\n"
+                text += f"   - 负责人: {branch.get('负责人', '未知')}\n"
+                text += "\n"
+            
+            if len(branches) > 5:
+                text += f"*注：共有{len(branches)}家分支机构，仅显示前5家*\n\n"
+        
+        # 变更记录
+        changes = business_info.get("变更记录", [])
+        if changes:
+            text += f"## 变更记录（{len(changes)}条）\n\n"
+            for i, change in enumerate(changes[:5], 1):
+                text += f"{i}. **{change.get('变更项目', '未知')}** ({change.get('变更时间', '未知')})\n"
+                text += f"   - 变更前: {change.get('变更前内容', '未知')}\n"
+                text += f"   - 变更后: {change.get('变更后内容', '未知')}\n"
+                text += "\n"
+            
+            if len(changes) > 5:
+                text += f"*注：共有{len(changes)}条变更记录，仅显示前5条*\n"
+        
+        return text
+    
+    # ... 保留原有的其他方法 ...
     def _get_company_base_info(self, company_keyword: str, token: str) -> dict:
         """
         获取企业基本信息的API调用实现
