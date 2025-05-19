@@ -23,7 +23,8 @@ parameters:
     form: llm
   - name: query_type
     type: select
-    required: false
+    required: true
+    form: form
     options:
       - value: 基本信息
         label:
@@ -45,7 +46,6 @@ parameters:
       en_US: Type of information to query
       zh_Hans: 要查询的信息类型
     llm_description: 要查询的信息类型，可选"基本信息"、"工商信息"或"司法风险"
-    form: llm
 extra:
   python:
     source: tools/tianyancha-dify-plugin.py
