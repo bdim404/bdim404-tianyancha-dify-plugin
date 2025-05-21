@@ -9,7 +9,10 @@ identity:
     zh_Hans: 通过天眼查API获取企业信息和商业数据
   icon: icon.svg
 tools:
-  - tools/tianyancha-dify-plugin.yaml
+  - tools/tianyancha_base_info.yaml
+  - tools/tianyancha_business_info.yaml
+  - tools/tianyancha_judicial_risk.yaml
+
 extra:
   python:
     source: provider/tianyancha-dify-plugin.py
