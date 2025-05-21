@@ -2,14 +2,14 @@ identity:
   name: tianyancha-judicial-risk
   author: bdim
   label:
-    en_US: Tianyancha Judicial Risk
-    zh_Hans: 天眼查企业司法风险
+    en_US: Judicial Risk
+    zh_Hans: 司法风险
 description:
-  en_US: Get judicial risk information for companies from Tianyancha
-  zh_Hans: 从天眼查获取企业司法风险信息
+  en_US: Get judicial risk information for companies
+  zh_Hans: 获取企业司法风险信息
   human:
-    en_US: Get judicial risk information from Tianyancha
-    zh_Hans: 从天眼查获取企业司法风险信息
+    en_US: Get judicial risk information
+    zh_Hans: 获取企业司法风险信息
   llm: 可以通过公司名称或ID获取企业的司法风险信息，包括法律诉讼、法院公告、开庭公告、失信人、被执行人、立案信息、送达公告等维度的相关信息。
 parameters:
   - name: company_keyword
