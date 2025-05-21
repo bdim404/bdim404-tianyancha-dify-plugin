@@ -50,10 +50,18 @@ This plugin supports the following features:
 
 3. **Judicial Risk Query**: Query judicial risk information of enterprises, including legal proceedings, court announcements, court hearing announcements, dishonest entities, persons subject to enforcement, etc.
 
+4. **External Guarantees Query**: Query information about external guarantees provided by enterprises, including announcement date, guarantor, guaranteed party, guarantee method, guarantee amount, etc.
+
+5. **Chattel Mortgage Query**: Query chattel mortgage announcement information of enterprises, including mortgage registration information, creditor information, collateral details, and change records.
+
+6. **Serious Illegal Information Query**: Query serious illegal information of enterprises, including reasons for inclusion/removal, dates, and the authorities that made the decisions.
+
+7. **Public Notice Query**: Query bill public notice information of enterprises, including bill details, bill number, bill type, face value, announcement date, announcement content, etc.
+
 You can call this plugin in Dify workflows or elsewhere. All parameters have detailed annotations. Simply provide the company name or ID and select the type of information you need to query to get the corresponding results.
 
 ## Author
 
 **Author:** bdim, fernvenue  
-**Version:** 0.1.0
+**Version:** 0.2.0
 **Type:** tool
