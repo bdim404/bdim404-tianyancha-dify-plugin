@@ -1,0 +1,81 @@
+name: Auto Release
+
+on:
+  push:
+    branches: [ main, master ]
+    paths:
+      - 'manifest.yaml'
+      - '.github/workflows/release.yml'
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Download CLI tool
+        run: |
+          mkdir -p $RUNNER_TEMP/bin
+          cd $RUNNER_TEMP/bin
+
+          wget https://github.com/langgenius/dify-plugin-daemon/releases/download/0.0.6/dify-plugin-linux-amd64
+          chmod +x dify-plugin-linux-amd64
+
+          echo "CLI tool location:"
+          pwd
+          ls -la dify-plugin-linux-amd64
+
+      - name: Get basic info from manifest
+        id: get_basic_info
+        run: |
+          PLUGIN_NAME=$(grep "^name:" manifest.yaml | cut -d' ' -f2)
+          echo "Plugin name: $PLUGIN_NAME"
+          echo "plugin_name=$PLUGIN_NAME" >> $GITHUB_OUTPUT
+
+          VERSION=$(grep "^version:" manifest.yaml | cut -d' ' -f2)
+          echo "Plugin version: $VERSION"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=v$VERSION" >> $GITHUB_OUTPUT
+
+          AUTHOR=$(grep "^author:" manifest.yaml | cut -d' ' -f2)
+          echo "Plugin author: $AUTHOR"
+          echo "author=$AUTHOR" >> $GITHUB_OUTPUT
+
+      - name: Package Plugin
+        id: package
+        run: |
+          cd $GITHUB_WORKSPACE
+          PACKAGE_NAME="abstracts-index.difypkg"
+          $RUNNER_TEMP/bin/dify-plugin-linux-amd64 plugin package . -o "$PACKAGE_NAME"
+
+          echo "Package result:"
+          ls -la "$PACKAGE_NAME"
+          echo "package_name=$PACKAGE_NAME" >> $GITHUB_OUTPUT
+
+      - name: Delete existing release if exists
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ steps.get_basic_info.outputs.tag }}"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG exists, deleting..."
+            gh release delete "$TAG" --yes
+            git push --delete origin "$TAG" || true
+          fi
+
+      - name: Create new release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ steps.get_basic_info.outputs.tag }}"
+          PACKAGE_NAME="${{ steps.package.outputs.package_name }}"
+          
+          # Create release
+          gh release create "$TAG" \
+            --title "$TAG" \
+            "./${PACKAGE_NAME}"
