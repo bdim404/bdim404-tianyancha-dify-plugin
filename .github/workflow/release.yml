@@ -50,7 +50,7 @@ jobs:
         id: package
         run: |
           cd $GITHUB_WORKSPACE
-          PACKAGE_NAME="abstracts-index.difypkg"
+          PACKAGE_NAME="tianyancha.difypkg"
           $RUNNER_TEMP/bin/dify-plugin-linux-amd64 plugin package . -o "$PACKAGE_NAME"
 
           echo "Package result:"
