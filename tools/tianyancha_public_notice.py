@@ -9,112 +9,112 @@ from dify_plugin.entities.tool import ToolInvokeMessage
 class TianyanchaPublicNoticeTool(Tool):
     def _invoke(self, tool_parameters: dict[str, Any]) -> Generator[ToolInvokeMessage]:
         """
-        获取企业票据公示催告信息
+        Get enterprise bill public notice information
         
-        参数:
-            tool_parameters: 包含查询参数的字典
-                - company_keyword: 公司关键词(名称或ID)
-                - page_size: 每页数据量，默认20
-                - page_num: 页码，默认1
+        Parameters:
+            tool_parameters: Dictionary containing query parameters
+                - company_keyword: Company keyword (name or ID)
+                - page_size: Page size, default 20
+                - page_num: Page number, default 1
         """
-        # 获取参数
+        # Get parameters
         company_keyword = tool_parameters.get("company_keyword")
         page_size = tool_parameters.get("page_size", 20)
         page_num = tool_parameters.get("page_num", 1)
         
         if not company_keyword:
-            error_message = "公司关键词不能为空"
+            error_message = "Company keyword cannot be empty"
             yield self.create_json_message({"error": error_message})
             return
             
-        # 从runtime获取凭证
+        # Get credentials from runtime
         try:
             token = self.runtime.credentials["token"]
         except (KeyError, AttributeError):
-            error_message = "API token未配置，请在插件设置中提供有效的天眼查API Token"
+            error_message = "API token not configured, please provide a valid Tianyancha API Token in plugin settings"
             yield self.create_json_message({"error": error_message})
             return
         
-        # 调用API获取公示催告信息
+        # Call API to get public notice information
         try:
             result = self._get_company_public_notice(company_keyword, token, page_size, page_num)
             
-            # 返回结构化JSON数据
+            # Return structured JSON data
             yield self.create_json_message(result)
         except Exception as e:
-            error_message = f"请求过程中发生错误: {str(e)}"
+            error_message = f"Error occurred during request: {str(e)}"
             yield self.create_json_message({"error": error_message})
     
     def _get_company_public_notice(self, company_keyword: str, token: str, page_size: int = 20, page_num: int = 1) -> dict:
         """
-        获取企业票据公示催告信息的API调用实现
+        API call implementation for getting enterprise bill public notice information
         
-        参数:
-            company_keyword: 公司关键词
-            token: API凭证
-            page_size: 每页数据量
-            page_num: 页码
+        Parameters:
+            company_keyword: Company keyword
+            token: API credentials
+            page_size: Page size
+            page_num: Page number
             
-        返回:
-            格式化后的企业票据公示催告信息
+        Returns:
+            Formatted enterprise bill public notice information
         """
-        # 构建请求
+        # Build request
         url = f"http://open.api.tianyancha.com/services/v4/open/publicNotice?keyword={company_keyword}&pageSize={page_size}&pageNum={page_num}"
         headers = {'Authorization': token}
         
-        # 发送请求
+        # Send request
         response = requests.get(url, headers=headers)
         
-        # 检查响应状态
+        # Check response status
         if response.status_code != 200:
-            raise Exception(f"API请求失败，状态码: {response.status_code}, 响应: {response.text}")
+            raise Exception(f"API request failed, status code: {response.status_code}, response: {response.text}")
             
-        # 解析JSON响应
+        # Parse JSON response
         response_data = response.json()
         
-        # 检查API返回状态
+        # Check API return status
         if response_data.get("error_code") != 0:
-            error_msg = response_data.get("reason", "未知错误")
-            raise Exception(f"查询失败: {error_msg}")
+            error_msg = response_data.get("reason", "Unknown error")
+            raise Exception(f"Query failed: {error_msg}")
             
-        # 提取公示催告信息
+        # Extract public notice information
         notice_data = response_data.get("result", {})
         items_list = notice_data.get("items", [])
         total = notice_data.get("total", 0)
         
-        # 构建格式化信息
+        # Build formatted information
         notice_info = []
         for item in items_list:
             notice_entry = {
-                "票据类型": item.get("billType"),
-                "票据号码": item.get("billNum"),
-                "票面金额": item.get("billAmt"),
-                "票据开始日期": item.get("billBeginDt"),
-                "票据结束日期": item.get("billEndDt") or "未公示",
-                "紧急类型": item.get("exigentType"),
-                "公告日期": item.get("publishDt"),
-                "发布机构": item.get("publishOrgName"),
-                "出票人公司名称": item.get("drawCompanyName"),
-                "出票人公司ID": item.get("drawCompanyId"),
-                "持票人公司名称": item.get("ownerCompanyName"),
-                "持票人公司ID": item.get("ownerCompanyId"),
-                "申请人公司名称": item.get("applyCompanyName"),
-                "申请人公司ID": item.get("applyCompanyId"),
-                "付款银行": item.get("payCompanyName"),
-                "详细公告内容": item.get("infoDetail")
+                "bill_type": item.get("billType"),
+                "bill_number": item.get("billNum"),
+                "bill_amount": item.get("billAmt"),
+                "bill_start_date": item.get("billBeginDt"),
+                "bill_end_date": item.get("billEndDt") or "Not disclosed",
+                "urgent_type": item.get("exigentType"),
+                "publish_date": item.get("publishDt"),
+                "publish_organization": item.get("publishOrgName"),
+                "drawer_company_name": item.get("drawCompanyName"),
+                "drawer_company_id": item.get("drawCompanyId"),
+                "holder_company_name": item.get("ownerCompanyName"),
+                "holder_company_id": item.get("ownerCompanyId"),
+                "applicant_company_name": item.get("applyCompanyName"),
+                "applicant_company_id": item.get("applyCompanyId"),
+                "payment_bank": item.get("payCompanyName"),
+                "detailed_notice_content": item.get("infoDetail")
             }
             notice_info.append(notice_entry)
             
         result = {
-            "公示催告": {
-                "总记录数": total,
-                "当前页": page_num,
-                "每页数量": page_size,
-                "催告记录": notice_info
+            "public_notice": {
+                "total_records": total,
+                "current_page": page_num,
+                "page_size": page_size,
+                "notice_records": notice_info
             }
         }
         
         if not notice_info:
-            result["公示催告"]["说明"] = "未查询到该企业的票据公示催告信息"
+            result["public_notice"]["note"] = "No bill public notice information found for this enterprise"
             
         return result

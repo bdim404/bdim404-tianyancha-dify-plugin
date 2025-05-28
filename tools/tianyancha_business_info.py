@@ -9,44 +9,44 @@ from dify_plugin.entities.tool import ToolInvokeMessage
 class TianyanchaBusinessInfoTool(Tool):
     def _invoke(self, tool_parameters: dict[str, Any]) -> Generator[ToolInvokeMessage]:
         """
-        获取企业工商信息
+        Get company business information
         
-        参数:
-            tool_parameters: 包含查询参数的字典
-                - company_keyword: 公司关键词(名称或ID)
+        Parameters:
+            tool_parameters: Dictionary containing query parameters
+                - company_keyword: Company keyword (name or ID)
         """
-        # 获取参数
+        # Get parameters
         company_keyword = tool_parameters.get("company_keyword")
         
         if not company_keyword:
-            error_message = "公司关键词不能为空"
+            error_message = "Company keyword cannot be empty"
             yield self.create_json_message({"error": error_message})
             return
             
-        # 从runtime获取凭证
+        # Get credentials from runtime
         try:
             token = self.runtime.credentials["token"]
         except (KeyError, AttributeError):
-            error_message = "API token未配置，请在插件设置中提供有效的天眼查API Token"
+            error_message = "API token not configured, please provide a valid Tianyancha API Token in plugin settings"
             yield self.create_json_message({"error": error_message})
             return
         
-        # 调用API获取工商信息
+        # Call API to get business information
         try:
             result = self._get_company_business_info(company_keyword, token)
             
-            # 仅返回结构化JSON数据
+            # Return structured JSON data only
             yield self.create_json_message(result)
         except Exception as e:
-            error_message = f"请求过程中发生错误: {str(e)}"
+            error_message = f"Error occurred during request: {str(e)}"
             yield self.create_json_message({"error": error_message})
         
     def _format_timestamp(self, timestamp):
-        """格式化时间戳为可读日期"""
+        """Format timestamp to readable date"""
         if not timestamp:
-            return "未知"
+            return "Unknown"
         try:
-            # 毫秒时间戳转为秒
+            # Convert millisecond timestamp to seconds
             if len(str(timestamp)) > 10:
                 timestamp = int(timestamp) / 1000
             return datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d')
@@ -55,70 +55,70 @@ class TianyanchaBusinessInfoTool(Tool):
             
     def _get_company_business_info(self, company_keyword: str, token: str) -> dict:
         """
-        获取企业工商信息的API调用实现
+        API call implementation for getting company business information
         
-        参数:
-            company_keyword: 公司关键词
-            token: API凭证
+        Parameters:
+            company_keyword: Company keyword
+            token: API credentials
             
-        返回:
-            格式化后的企业工商信息
+        Returns:
+            Formatted company business information
         """
-        # 构建请求
+        # Build request
         url = f"http://open.api.tianyancha.com/services/open/cb/ic/2.0?keyword={company_keyword}"
         headers = {'Authorization': token}
         
-        # 发送请求
+        # Send request
         response = requests.get(url, headers=headers)
         
-        # 检查响应状态
+        # Check response status
         if response.status_code != 200:
-            raise Exception(f"API请求失败，状态码: {response.status_code}, 响应: {response.text}")
+            raise Exception(f"API request failed, status code: {response.status_code}, response: {response.text}")
             
-        # 解析JSON响应
+        # Parse JSON response
         response_data = response.json()
         
-        # 检查API返回状态
+        # Check API return status
         if response_data.get("error_code") != 0:
-            error_msg = response_data.get("reason", "未知错误")
-            raise Exception(f"查询失败: {error_msg}")
+            error_msg = response_data.get("reason", "Unknown error")
+            raise Exception(f"Query failed: {error_msg}")
             
-        # 提取工商信息
+        # Extract business information
         business_data = response_data.get("result", {})
         
-        # 构建格式化信息
-        result = {"工商信息": {}}
+        # Build formatted information
+        result = {"Business Information": {}}
         
-        # 基本信息部分
+        # Basic information section
         basic_info = {
-            "公司名称": business_data.get("name"),
-            "注册资本": business_data.get("regCapital"),
-            "实缴资本": business_data.get("actualCapital"),
-            "成立日期": self._format_timestamp(business_data.get("estiblishTime")),
-            "统一社会信用代码": business_data.get("creditCode"),
-            "工商注册号": business_data.get("regNumber"),
-            "企业类型": business_data.get("companyOrgType"),
-            "经营状态": business_data.get("regStatus"),
-            "法定代表人": business_data.get("legalPersonName"),
-            "注册地址": business_data.get("regLocation"),
-            "登记机关": business_data.get("regInstitute"),
-            "经营范围": business_data.get("businessScope")
+            "Company Name": business_data.get("name"),
+            "Registered Capital": business_data.get("regCapital"),
+            "Paid-in Capital": business_data.get("actualCapital"),
+            "Establishment Date": self._format_timestamp(business_data.get("estiblishTime")),
+            "Unified Social Credit Code": business_data.get("creditCode"),
+            "Business Registration Number": business_data.get("regNumber"),
+            "Company Type": business_data.get("companyOrgType"),
+            "Business Status": business_data.get("regStatus"),
+            "Legal Representative": business_data.get("legalPersonName"),
+            "Registered Address": business_data.get("regLocation"),
+            "Registration Authority": business_data.get("regInstitute"),
+            "Business Scope": business_data.get("businessScope")
         }
-        result["工商信息"]["基本信息"] = basic_info
+        result["Business Information"]["Basic Information"] = basic_info
         
-        # 主要人员
+        # Key personnel
         staff_list = business_data.get("staffList", [])
         if staff_list:
             staff_info = []
             for staff in staff_list:
                 staff_info.append({
-                    "姓名": staff.get("name"),
-                    "职位": staff.get("staffTypeName"),
-                    "其他职位": staff.get("typeJoin", [])
+                    "Name": staff.get("name"),
+                    "Position": staff.get("staffTypeName"),
+                    "Other Positions": staff.get("typeJoin", [])
                 })
-            result["工商信息"]["主要人员"] = staff_info
+            result["Business Information"]["Key Personnel"] = staff_info
         
-        # 股东信息
+        # Shareholder information
         shareholder_list = business_data.get("shareHolderList", [])
         if shareholder_list:
             shareholder_info = []
@@ -126,73 +126,73 @@ class TianyanchaBusinessInfoTool(Tool):
                 capital_info = []
                 for capital in shareholder.get("capital", []):
                     capital_info.append({
-                        "出资额": capital.get("amomon"),
-                        "出资比例": capital.get("percent"),
-                        "出资方式": capital.get("paymet"),
-                        "出资时间": capital.get("time")
+                        "Investment Amount": capital.get("amomon"),
+                        "Investment Ratio": capital.get("percent"),
+                        "Investment Method": capital.get("paymet"),
+                        "Investment Time": capital.get("time")
                     })
                 
                 shareholder_info.append({
-                    "股东名称": shareholder.get("name"),
-                    "股东类型": "自然人" if shareholder.get("type") == 2 else "企业",
-                    "资本信息": capital_info
+                    "Shareholder Name": shareholder.get("name"),
+                    "Shareholder Type": "Individual" if shareholder.get("type") == 2 else "Enterprise",
+                    "Capital Information": capital_info
                 })
-            result["工商信息"]["股东信息"] = shareholder_info
+            result["Business Information"]["Shareholder Information"] = shareholder_info
         
-        # 对外投资
+        # External investments
         invest_list = business_data.get("investList", [])
         if invest_list:
             investment_info = []
-            for invest in invest_list[:10]:  # 只取前10个投资,避免数据过多
+            for invest in invest_list[:10]:  # Only take first 10 investments to avoid too much data
                 investment_info.append({
-                    "被投资企业名称": invest.get("name"),
-                    "被投资企业简称": invest.get("alias"),
-                    "投资比例": invest.get("percent"),
-                    "投资金额": invest.get("amount"),
-                    "注册资本": invest.get("regCapital"),
-                    "经营状态": invest.get("regStatus"),
-                    "成立日期": self._format_timestamp(invest.get("estiblishTime")),
-                    "所属行业": invest.get("category")
+                    "Invested Company Name": invest.get("name"),
+                    "Invested Company Alias": invest.get("alias"),
+                    "Investment Ratio": invest.get("percent"),
+                    "Investment Amount": invest.get("amount"),
+                    "Registered Capital": invest.get("regCapital"),
+                    "Business Status": invest.get("regStatus"),
+                    "Establishment Date": self._format_timestamp(invest.get("estiblishTime")),
+                    "Industry": invest.get("category")
                 })
-            result["工商信息"]["对外投资"] = investment_info
+            result["Business Information"]["External Investments"] = investment_info
             
-            # 如果投资公司超过10个,添加提示
+            # If more than 10 investment companies, add note
             if len(invest_list) > 10:
-                result["工商信息"]["对外投资_说明"] = f"该企业共有{len(invest_list)}家对外投资企业,仅展示前10家"
+                result["Business Information"]["External Investments Note"] = f"The company has a total of {len(invest_list)} external investment companies, only showing the first 10"
         
-        # 分支机构
+        # Branches
         branch_list = business_data.get("branchList", [])
         if branch_list:
             branch_info = []
-            for branch in branch_list[:10]:  # 只取前10个分支机构,避免数据过多
+            for branch in branch_list[:10]:  # Only take first 10 branches to avoid too much data
                 branch_info.append({
-                    "分支机构名称": branch.get("name"),
-                    "分支机构简称": branch.get("alias"),
-                    "登记状态": branch.get("regStatus"),
-                    "成立日期": self._format_timestamp(branch.get("estiblishTime")),
-                    "负责人": branch.get("legalPersonName")
+                    "Branch Name": branch.get("name"),
+                    "Branch Alias": branch.get("alias"),
+                    "Registration Status": branch.get("regStatus"),
+                    "Establishment Date": self._format_timestamp(branch.get("estiblishTime")),
+                    "Person in Charge": branch.get("legalPersonName")
                 })
-            result["工商信息"]["分支机构"] = branch_info
+            result["Business Information"]["Branches"] = branch_info
             
-            # 如果分支机构超过10个,添加提示
+            # If more than 10 branches, add note
             if len(branch_list) > 10:
-                result["工商信息"]["分支机构_说明"] = f"该企业共有{len(branch_list)}家分支机构,仅展示前10家"
+                result["Business Information"]["Branches Note"] = f"The company has a total of {len(branch_list)} branches, only showing the first 10"
         
-        # 变更记录
+        # Change records
         change_list = business_data.get("changeList", [])
         if change_list:
             change_info = []
-            for change in change_list[:10]:  # 只取前10个变更记录,避免数据过多
+            for change in change_list[:10]:  # Only take first 10 change records to avoid too much data
                 change_info.append({
-                    "变更项目": change.get("changeItem"),
-                    "变更时间": change.get("changeTime"),
-                    "变更前内容": change.get("contentBefore"),
-                    "变更后内容": change.get("contentAfter")
+                    "Change Item": change.get("changeItem"),
+                    "Change Time": change.get("changeTime"),
+                    "Content Before": change.get("contentBefore"),
+                    "Content After": change.get("contentAfter")
                 })
-            result["工商信息"]["变更记录"] = change_info
+            result["Business Information"]["Change Records"] = change_info
             
-            # 如果变更记录超过10个,添加提示
+            # If more than 10 change records, add note
             if len(change_list) > 10:
-                result["工商信息"]["变更记录_说明"] = f"该企业共有{len(change_list)}条变更记录,仅展示前10条"
+                result["Business Information"]["Change Records Note"] = f"The company has a total of {len(change_list)} change records, only showing the first 10"
             
         return result

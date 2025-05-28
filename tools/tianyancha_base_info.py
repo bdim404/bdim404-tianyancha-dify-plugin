@@ -9,50 +9,50 @@ from dify_plugin.entities.tool import ToolInvokeMessage
 class TianyanchaBaseInfoTool(Tool):
     def _invoke(self, tool_parameters: dict[str, Any]) -> Generator[ToolInvokeMessage]:
         """
-        获取企业基本信息
+        Get company basic information
         
-        参数:
-            tool_parameters: 包含查询参数的字典
-                - company_keyword: 公司关键词(名称或ID)
+        Parameters:
+            tool_parameters: Dictionary containing query parameters
+                - company_keyword: Company keyword (name or ID)
         """
-        # 获取参数
+        # Get parameters
         company_keyword = tool_parameters.get("company_keyword")
         
         if not company_keyword:
-            error_message = "公司关键词不能为空"
+            error_message = "Company keyword cannot be empty"
             yield self.create_json_message({"error": error_message})
             yield self.create_text_message(error_message)
             return
             
-        # 从runtime获取凭证
+        # Get credentials from runtime
         try:
             token = self.runtime.credentials["token"]
         except (KeyError, AttributeError):
-            error_message = "API token未配置，请在插件设置中提供有效的天眼查API Token"
+            error_message = "API token not configured, please provide a valid Tianyancha API Token in plugin settings"
             yield self.create_json_message({"error": error_message})
             yield self.create_text_message(error_message)
             return
         
-        # 调用API获取基本信息
+        # Call API to get basic information
         try:
             result = self._get_company_base_info(company_keyword, token)
             text_result = self._generate_base_info_text(result)
             
-            # 返回结构化JSON数据
+            # Return structured JSON data
             yield self.create_json_message(result)
-            # 返回可读文本格式
+            # Return readable text format
             yield self.create_text_message(text_result)
         except Exception as e:
-            error_message = f"请求过程中发生错误: {str(e)}"
+            error_message = f"Error occurred during request: {str(e)}"
             yield self.create_json_message({"error": error_message})
             yield self.create_text_message(error_message)
             
     def _format_timestamp(self, timestamp):
-        """格式化时间戳为可读日期"""
+        """Format timestamp to readable date"""
         if not timestamp:
-            return "未知"
+            return "Unknown"
         try:
-            # 毫秒时间戳转为秒
+            # Convert millisecond timestamp to seconds
             if len(str(timestamp)) > 10:
                 timestamp = int(timestamp) / 1000
             return datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d')
@@ -60,86 +60,86 @@ class TianyanchaBaseInfoTool(Tool):
             return str(timestamp)
     
     def _generate_base_info_text(self, data: dict) -> str:
-        """生成企业基本信息的可读文本"""
-        basic_info = data.get("基本信息", {})
-        reg_info = data.get("注册信息", {})
-        tags = data.get("企业标签", [])
+        """Generate readable text for company basic information"""
+        basic_info = data.get("Basic Information", {})
+        reg_info = data.get("Registration Information", {})
+        tags = data.get("Company Tags", [])
         
-        text = f"# {basic_info.get('公司名称', '未知企业')}的基本信息\n\n"
+        text = f"# Basic Information of {basic_info.get('Company Name', 'Unknown Company')}\n\n"
         
-        text += "## 基本信息\n"
+        text += "## Basic Information\n"
         for key, value in basic_info.items():
-            if value and key != "行业细分":  # 排除行业细分，因为它可能是复杂结构
+            if value and key != "Industry Details":  # Exclude industry details as it may be complex structure
                 text += f"- **{key}**: {value}\n"
         
-        text += "\n## 注册信息\n"
+        text += "\n## Registration Information\n"
         for key, value in reg_info.items():
             if value:
                 text += f"- **{key}**: {value}\n"
         
         if tags:
-            text += "\n## 企业标签\n"
-            text += "- " + "、".join(tags) + "\n"
+            text += "\n## Company Tags\n"
+            text += "- " + ", ".join(tags) + "\n"
         
         return text
     
     def _get_company_base_info(self, company_keyword: str, token: str) -> dict:
         """
-        获取企业基本信息的API调用实现
+        API call implementation for getting company basic information
         
-        参数:
-            company_keyword: 公司关键词
-            token: API凭证
+        Parameters:
+            company_keyword: Company keyword
+            token: API credentials
             
-        返回:
-            格式化后的企业基本信息
+        Returns:
+            Formatted company basic information
         """
-        # 构建请求
+        # Build request
         url = f"http://open.api.tianyancha.com/services/open/ic/baseinfo/normal?keyword={company_keyword}"
         headers = {'Authorization': token}
         
-        # 发送请求
+        # Send request
         response = requests.get(url, headers=headers)
         
-        # 检查响应状态
+        # Check response status
         if response.status_code != 200:
-            raise Exception(f"API请求失败，状态码: {response.status_code}, 响应: {response.text}")
+            raise Exception(f"API request failed, status code: {response.status_code}, response: {response.text}")
             
-        # 解析JSON响应
+        # Parse JSON response
         response_data = response.json()
         
-        # 检查API返回状态
+        # Check API return status
         if response_data.get("error_code") != 0 or not response_data.get("result"):
-            error_msg = response_data.get("reason", "未知错误")
-            raise Exception(f"查询失败: {error_msg}")
+            error_msg = response_data.get("reason", "Unknown error")
+            raise Exception(f"Query failed: {error_msg}")
             
-        # 提取企业基本信息字段
+        # Extract company basic information fields
         company_data = response_data.get("result", {})
         
-        # 构建格式化信息
+        # Build formatted information
         return {
-            "基本信息": {
-                "公司名称": company_data.get("name"),
-                "英文名称": company_data.get("property3"),
-                "公司别名": company_data.get("alias"),
-                "法定代表人": company_data.get("legalPersonName"),
-                "企业类型": company_data.get("companyOrgType"),
-                "注册资本": f"{company_data.get('regCapital')}",
-                "实缴资本": f"{company_data.get('actualCapital')}",
-                "成立日期": self._format_timestamp(company_data.get("estiblishTime")),
-                "经营状态": company_data.get("regStatus"),
-                "统一社会信用代码": company_data.get("creditCode"),
-                "工商注册号": company_data.get("regNumber"),
-                "组织机构代码": company_data.get("orgNumber"),
-                "纳税人识别号": company_data.get("taxNumber"),
-                "所属行业": company_data.get("industry"),
-                "行业细分": company_data.get("industryAll", {})
+            "Basic Information": {
+                "Company Name": company_data.get("name"),
+                "English Name": company_data.get("property3"),
+                "Company Alias": company_data.get("alias"),
+                "Legal Representative": company_data.get("legalPersonName"),
+                "Company Type": company_data.get("companyOrgType"),
+                "Registered Capital": f"{company_data.get('regCapital')}",
+                "Paid-in Capital": f"{company_data.get('actualCapital')}",
+                "Establishment Date": self._format_timestamp(company_data.get("estiblishTime")),
+                "Business Status": company_data.get("regStatus"),
+                "Unified Social Credit Code": company_data.get("creditCode"),
+                "Business Registration Number": company_data.get("regNumber"),
+                "Organization Code": company_data.get("orgNumber"),
+                "Taxpayer Identification Number": company_data.get("taxNumber"),
+                "Industry": company_data.get("industry"),
+                "Industry Details": company_data.get("industryAll", {})
             },
-            "注册信息": {
-                "登记机关": company_data.get("regInstitute"),
-                "注册地址": company_data.get("regLocation"),
-                "经营范围": company_data.get("businessScope"),
-                "营业期限": f"{self._format_timestamp(company_data.get('fromTime'))} 至 {self._format_timestamp(company_data.get('toTime'))}"
+            "Registration Information": {
+                "Registration Authority": company_data.get("regInstitute"),
+                "Registered Address": company_data.get("regLocation"),
+                "Business Scope": company_data.get("businessScope"),
+                "Business Term": f"{self._format_timestamp(company_data.get('fromTime'))} to {self._format_timestamp(company_data.get('toTime'))}"
             },
-            "企业标签": company_data.get("tags", "").split(";") if company_data.get("tags") else []
+            "Company Tags": company_data.get("tags", "").split(";") if company_data.get("tags") else []
         }

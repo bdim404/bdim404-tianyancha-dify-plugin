@@ -9,194 +9,194 @@ from dify_plugin.entities.tool import ToolInvokeMessage
 class TianyanchaJudicialRiskTool(Tool):
     def _invoke(self, tool_parameters: dict[str, Any]) -> Generator[ToolInvokeMessage]:
         """
-        获取企业司法风险信息
+        Get enterprise judicial risk information
         
-        参数:
-            tool_parameters: 包含查询参数的字典
-                - company_keyword: 公司关键词(名称或ID)
+        Parameters:
+            tool_parameters: Dictionary containing query parameters
+                - company_keyword: Company keyword (name or ID)
         """
-        # 获取参数
+        # Get parameters
         company_keyword = tool_parameters.get("company_keyword")
         
         if not company_keyword:
-            error_message = "公司关键词不能为空"
+            error_message = "Company keyword cannot be empty"
             yield self.create_json_message({"error": error_message})
             return
             
-        # 从runtime获取凭证
+        # Get credentials from runtime
         try:
             token = self.runtime.credentials["token"]
         except (KeyError, AttributeError):
-            error_message = "API token未配置，请在插件设置中提供有效的天眼查API Token"
+            error_message = "API token not configured, please provide a valid Tianyancha API Token in plugin settings"
             yield self.create_json_message({"error": error_message})
             return
         
-        # 调用API获取司法风险信息
+        # Call API to get judicial risk information
         try:
             result = self._get_company_judicial_risk(company_keyword, token)
             
-            # 仅返回结构化JSON数据
+            # Return only structured JSON data
             yield self.create_json_message(result)
         except Exception as e:
-            error_message = f"请求过程中发生错误: {str(e)}"
+            error_message = f"Error occurred during request: {str(e)}"
             yield self.create_json_message({"error": error_message})
         
     def _get_company_judicial_risk(self, company_keyword: str, token: str) -> dict:
         """
-        获取企业司法风险信息的API调用实现
+        API call implementation for getting enterprise judicial risk information
         
-        参数:
-            company_keyword: 公司关键词
-            token: API凭证
+        Parameters:
+            company_keyword: Company keyword
+            token: API credentials
             
-        返回:
-            格式化后的企业司法风险信息
+        Returns:
+            Formatted enterprise judicial risk information
         """
-        # 构建请求
+        # Build request
         url = f"http://open.api.tianyancha.com/services/open/cb/judicial/2.0?keyword={company_keyword}"
         headers = {'Authorization': token}
         
-        # 发送请求
+        # Send request
         response = requests.get(url, headers=headers)
         
-        # 检查响应状态
+        # Check response status
         if response.status_code != 200:
-            raise Exception(f"API请求失败，状态码: {response.status_code}, 响应: {response.text}")
+            raise Exception(f"API request failed, status code: {response.status_code}, response: {response.text}")
             
-        # 解析JSON响应
+        # Parse JSON response
         response_data = response.json()
         
-        # 检查API返回状态
+        # Check API return status
         if response_data.get("error_code") != 0:
-            error_msg = response_data.get("reason", "未知错误")
-            raise Exception(f"查询失败: {error_msg}")
+            error_msg = response_data.get("reason", "Unknown error")
+            raise Exception(f"Query failed: {error_msg}")
             
-        # 提取司法风险信息
+        # Extract judicial risk information
         judicial_data = response_data.get("result", {})
         
-        # 构建格式化信息
-        result = {"司法风险": {}}
+        # Build formatted information
+        result = {"judicial_risk": {}}
         
-        # 法律诉讼
+        # Legal lawsuits
         lawsuit_list = judicial_data.get("lawSuitList", [])
         if lawsuit_list:
-            result["司法风险"]["法律诉讼"] = [self._format_lawsuit(item) for item in lawsuit_list]
+            result["judicial_risk"]["legal_lawsuits"] = [self._format_lawsuit(item) for item in lawsuit_list]
         
-        # 开庭公告
+        # Court hearing announcements
         kt_announcement_list = judicial_data.get("ktAnnouncementList", [])
         if kt_announcement_list:
-            result["司法风险"]["开庭公告"] = [self._format_kt_announcement(item) for item in kt_announcement_list]
+            result["judicial_risk"]["court_hearing_announcements"] = [self._format_kt_announcement(item) for item in kt_announcement_list]
         
-        # 被执行人
+        # Executed persons
         zhixing_list = judicial_data.get("zhixingList", [])
         if zhixing_list:
-            result["司法风险"]["被执行人"] = [self._format_zhixing(item) for item in zhixing_list]
+            result["judicial_risk"]["executed_persons"] = [self._format_zhixing(item) for item in zhixing_list]
         
-        # 法院公告
+        # Court announcements
         court_announcement_list = judicial_data.get("courtAnnouncementList", [])
         if court_announcement_list:
-            result["司法风险"]["法院公告"] = [self._format_court_announcement(item) for item in court_announcement_list]
+            result["judicial_risk"]["court_announcements"] = [self._format_court_announcement(item) for item in court_announcement_list]
         
-        # 立案信息
+        # Case filing information
         court_register_list = judicial_data.get("courtRegisterList", [])
         if court_register_list:
-            result["司法风险"]["立案信息"] = [self._format_court_register(item) for item in court_register_list]
+            result["judicial_risk"]["case_filing_information"] = [self._format_court_register(item) for item in court_register_list]
         
-        # 送达公告
+        # Service announcements
         send_announcement_list = judicial_data.get("sendAnnouncementList", [])
         if send_announcement_list:
-            result["司法风险"]["送达公告"] = [self._format_send_announcement(item) for item in send_announcement_list]
+            result["judicial_risk"]["service_announcements"] = [self._format_send_announcement(item) for item in send_announcement_list]
         
-        # 失信人
+        # Dishonest persons
         dishonest_list = judicial_data.get("dishonestList", [])
         if dishonest_list:
-            result["司法风险"]["失信人"] = [self._format_dishonest(item) for item in dishonest_list]
+            result["judicial_risk"]["dishonest_persons"] = [self._format_dishonest(item) for item in dishonest_list]
         
-        # 如果没有任何司法风险数据
-        if not result["司法风险"]:
-            result["司法风险"] = "未查询到该企业的司法风险信息"
+        # If no judicial risk data
+        if not result["judicial_risk"]:
+            result["judicial_risk"] = "No judicial risk information found for this enterprise"
             
         return result
     
     def _format_lawsuit(self, item: dict) -> dict:
-        """格式化法律诉讼信息"""
+        """Format legal lawsuit information"""
         return {
-            "案件编号": item.get("caseno"),
-            "案件标题": item.get("title"),
-            "案由": item.get("casereason"),
-            "案件类型": item.get("casetype"),
-            "法院": item.get("court"),
-            "文书类型": item.get("doctype"),
-            "提交时间": item.get("submittime"),
-            "裁判时间": item.get("judgetime"),
-            "原告": item.get("plaintiffs"),
-            "被告": item.get("defendants"),
-            "案件链接": item.get("lawsuitUrl")
+            "case_number": item.get("caseno"),
+            "case_title": item.get("title"),
+            "case_reason": item.get("casereason"),
+            "case_type": item.get("casetype"),
+            "court": item.get("court"),
+            "document_type": item.get("doctype"),
+            "submit_time": item.get("submittime"),
+            "judgment_time": item.get("judgetime"),
+            "plaintiffs": item.get("plaintiffs"),
+            "defendants": item.get("defendants"),
+            "lawsuit_url": item.get("lawsuitUrl")
         }
         
     def _format_kt_announcement(self, item: dict) -> dict:
-        """格式化开庭公告信息"""
+        """Format court hearing announcement information"""
         return {
-            "案件编号": item.get("caseNo"),
-            "案由": item.get("caseReason"),
-            "法院": item.get("court"),
-            "开庭日期": item.get("startDate"),
-            "法庭": item.get("courtroom"),
-            "当事人": item.get("litigant")
+            "case_number": item.get("caseNo"),
+            "case_reason": item.get("caseReason"),
+            "court": item.get("court"),
+            "hearing_date": item.get("startDate"),
+            "courtroom": item.get("courtroom"),
+            "litigants": item.get("litigant")
         }
     
     def _format_zhixing(self, item: dict) -> dict:
-        """格式化被执行人信息"""
+        """Format executed person information"""
         return {
-            "案件编号": item.get("caseCode"),
-            "执行法院": item.get("execCourtName"),
-            "立案时间": item.get("caseCreateTime"),
-            "执行标的": item.get("execMoney")
+            "case_code": item.get("caseCode"),
+            "execution_court": item.get("execCourtName"),
+            "case_filing_time": item.get("caseCreateTime"),
+            "execution_amount": item.get("execMoney")
         }
     
     def _format_court_announcement(self, item: dict) -> dict:
-        """格式化法院公告信息"""
+        """Format court announcement information"""
         return {
-            "案件编号": item.get("caseno"),
-            "当事人1": item.get("party1"),
-            "当事人2": item.get("party2"),
-            "案由": item.get("reason"),
-            "法院": item.get("courtcode"),
-            "公告类型": item.get("bltntypename"),
-            "公告日期": item.get("publishdate"),
-            "内容摘要": item.get("content")[:100] + "..." if len(item.get("content", "")) > 100 else item.get("content")
+            "case_number": item.get("caseno"),
+            "party_1": item.get("party1"),
+            "party_2": item.get("party2"),
+            "case_reason": item.get("reason"),
+            "court": item.get("courtcode"),
+            "announcement_type": item.get("bltntypename"),
+            "publish_date": item.get("publishdate"),
+            "content_summary": item.get("content")[:100] + "..." if len(item.get("content", "")) > 100 else item.get("content")
         }
     
     def _format_court_register(self, item: dict) -> dict:
-        """格式化立案信息"""
+        """Format case filing information"""
         return {
-            "案件编号": item.get("caseNo"),
-            "立案日期": item.get("filingDate"),
-            "法院": item.get("court"),
-            "原告": item.get("plaintiff"),
-            "被告": item.get("defendant"),
-            "案由": item.get("caseReason") or "未公开"
+            "case_number": item.get("caseNo"),
+            "filing_date": item.get("filingDate"),
+            "court": item.get("court"),
+            "plaintiff": item.get("plaintiff"),
+            "defendant": item.get("defendant"),
+            "case_reason": item.get("caseReason") or "Not disclosed"
         }
     
     def _format_send_announcement(self, item: dict) -> dict:
-        """格式化送达公告信息"""
+        """Format service announcement information"""
         return {
-            "标题": item.get("title"),
-            "法院": item.get("court"),
-            "公告日期": item.get("startDate"),
-            "内容摘要": item.get("content")[:100] + "..." if len(item.get("content", "")) > 100 else item.get("content")
+            "title": item.get("title"),
+            "court": item.get("court"),
+            "announcement_date": item.get("startDate"),
+            "content_summary": item.get("content")[:100] + "..." if len(item.get("content", "")) > 100 else item.get("content")
         }
     
     def _format_dishonest(self, item: dict) -> dict:
-        """格式化失信人信息"""
+        """Format dishonest person information"""
         return {
-            "案件编号": item.get("casecode"),
-            "失信人名称": item.get("iname"),
-            "执行法院": item.get("courtname"),
-            "地区": item.get("areaname"),
-            "立案日期": item.get("regdate"),
-            "公布日期": item.get("publishdate"),
-            "失信行为": item.get("disrupttypename"),
-            "履行情况": item.get("performance"),
-            "义务": item.get("duty")
+            "case_code": item.get("casecode"),
+            "dishonest_person_name": item.get("iname"),
+            "execution_court": item.get("courtname"),
+            "area": item.get("areaname"),
+            "filing_date": item.get("regdate"),
+            "publish_date": item.get("publishdate"),
+            "dishonest_behavior": item.get("disrupttypename"),
+            "performance_status": item.get("performance"),
+            "obligations": item.get("duty")
         }

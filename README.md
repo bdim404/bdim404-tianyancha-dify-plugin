@@ -62,6 +62,6 @@ You can call this plugin in Dify workflows or elsewhere. All parameters have det
 
 ## Author
 
-**Author:** bdim, fernvenue  
-**Version:** 0.2.0
+**Author:** bdim, fernvenue   
+**Version:** 0.2.1  
 **Type:** tool
